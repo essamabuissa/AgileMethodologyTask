@@ -1,5 +1,14 @@
 import React from "react";
-import { View, Text, StyleSheet, Image, SafeAreaView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const styles = StyleSheet.create({
   bookName: {
@@ -22,7 +31,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: "25%",
+    height: "100%",
     borderWidth: 0,
   },
   innerContainer: {
@@ -33,7 +42,7 @@ const styles = StyleSheet.create({
 const BookDetails = ({ route }) => {
   const { book, thumbnail } = route.params;
   return (
-    <View style={styles.container}>
+    <ScrollView>
       {thumbnail ? (
         <Image
           style={styles.image}
@@ -57,7 +66,7 @@ const BookDetails = ({ route }) => {
           {book?.numner_of_pages ? book?.numner_of_pages : "Not Available"}
         </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 

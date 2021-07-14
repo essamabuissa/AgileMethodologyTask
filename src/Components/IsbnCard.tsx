@@ -5,11 +5,12 @@ import { IsbnCardProps } from "../Common/Types";
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
+    shadowOpacity: 0.2,
     padding: 10,
     borderRadius: 10,
     marginTop: 10,
     marginHorizontal: 2,
+    backgroundColor: "white",
   },
 });
 const IsbnCard = ({ isbn, onPress }: IsbnCardProps) => {

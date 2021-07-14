@@ -25,6 +25,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "lightblue",
     flexDirection: "row",
+    shadowOpacity: 0.2,
   },
   buttonTitle: {
     fontWeight: "bold",
@@ -48,6 +49,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     paddingLeft: 10,
+    borderColor: "gray",
   },
   inputContainer: {
     flexDirection: "row",
@@ -66,16 +68,22 @@ const Books = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [thumbnail, setThumbnail] = useState("");
+  const [error, setError] = useState("");
 
   const navigateToBookDetails = (book) => {
     navigation.navigate(BOOK_DETAILS, { book: book.item, thumbnail });
   };
 
   const addToManyBooks = () => {
-    manyBooks.push(query);
-    setQuery("");
+    if (manyBooks.includes(query)) {
+      alert("You already added this ISBN, Add another one");
+    } else if (query.length === 10 || query.length === 13) {
+      manyBooks.push(query);
+      setQuery("");
+    } else {
+      setError("ISBN must be between 10 or 13 ");
+    }
   };
-
   const booksList = (book) => {
     return (
       <BookCard
@@ -90,6 +98,9 @@ const Books = ({ navigation }) => {
   };
 
   const manageManySearch = () => {
+    if (manyBooks.length === 0) {
+      alert("Please enter ISBN");
+    }
     setLoading(true);
     if (many) {
       setMany(false);
@@ -102,9 +113,7 @@ const Books = ({ navigation }) => {
     "books",
     async () => {
       try {
-        console.log("entered try");
         for (let i = 0; i < manyBooks.length; i++) {
-          console.log(manyBooks[i], "inside for");
           const res = await axios.get(
             `https://openlibrary.org/isbn/${manyBooks[i]}.json`
           );
@@ -115,16 +124,20 @@ const Books = ({ navigation }) => {
               `https://openlibrary.org/api/books?bibkeys=ISBN:${manyBooks[i]}&format=json`
             );
             const thumbnailUrl =
-              res?.data[`ISBN:${manyBooks[i]}`].thumbnail_url;
-            console.log(thumbnailUrl, "thumbnailUrl");
+              res?.data[`ISBN:${manyBooks[i]}`].thußmbnail_url;
             setThumbnail(thumbnailUrl);
-          } catch (error) {}
+          } catch (error) {
+            setError(error.message);
+          }
         }
         manyBooks = [];
         setMany(false);
         setLoading(false);
       } catch (error) {
-        console.log(error, "error");
+        manyBooks = [];
+        setMany(false);
+        setLoading(false);
+        setError(error.message);
       }
     },
     {
@@ -137,13 +150,16 @@ const Books = ({ navigation }) => {
       <SafeAreaView />
       <Text style={styles.header}>Books</Text>
 
-      <Text>Search Many Books</Text>
+      <Text>Search One of More Books</Text>
       <View style={styles.inputContainer}>
         <TextInput
           value={query}
-          onChangeText={setQuery}
+          onChangeText={(value) => {
+            setQuery(value);
+            setError("");
+          }}
           keyboardType="number-pad"
-          placeholder={"Search"}
+          placeholder={"Enter ISBN then press +"}
           style={styles.input}
         />
         <TouchableOpacity onPress={addToManyBooks}>
@@ -155,6 +171,7 @@ const Books = ({ navigation }) => {
           />
         </TouchableOpacity>
       </View>
+      {error ? <Text style={{ color: "red" }}>{error}</Text> : <View />}
       <View style={styles.isbnList}>
         {manyBooks.map((isbn) => {
           return <IsbnCard key={isbn} isbn={isbn} />;
