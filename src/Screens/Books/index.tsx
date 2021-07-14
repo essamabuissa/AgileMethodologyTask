@@ -1,18 +1,35 @@
 import React, { useState } from "react";
 import {
   View,
+  TouchableOpacity,
   Text,
   StyleSheet,
   SafeAreaView,
   FlatList,
   Button,
+  ActivityIndicator,
   TextInput,
 } from "react-native";
 import BookCard from "./BookCard";
 import { BOOK_DETAILS } from "../../Navigation/screenNames";
-import { useQuery, useMutation, useQueryClient } from "react-query";
+import { useQuery } from "react-query";
 import axios from "axios";
+import { Ionicons } from "@expo/vector-icons";
+import IsbnCard from "../../Components/IsbnCard";
+
 const styles = StyleSheet.create({
+  button: {
+    marginTop: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: "lightblue",
+    flexDirection: "row",
+  },
+  buttonTitle: {
+    fontWeight: "bold",
+    color: "white",
+  },
   container: {
     flex: 1,
     alignItems: "center",
@@ -21,6 +38,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 20,
   },
+  icon: {
+    position: "absolute",
+    right: 0,
+  },
   input: {
     borderWidth: 1,
     width: "50%",
@@ -28,89 +49,130 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingLeft: 10,
   },
+  inputContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  isbnList: {
+    flexDirection: "row",
+    display: "flex",
+    flexWrap: "wrap",
+  },
 });
-//https://openlibrary.org/api/books?bibkeys=ISBN:0385472579&format=json
+var manyBooks = [];
+var manyBooksNew = [];
 const Books = ({ navigation }) => {
-  const [intervalMs, setIntervalMs] = React.useState(1000);
+  const [many, setMany] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const [multipleBooks, setMultipleBooks] = useState([]);
   const [thumbnail, setThumbnail] = useState("");
-  //   console.log(thumbnail, "thhhhhh");
-  const queryClient = useQueryClient();
-  //   const [data, setData] = useState();
-  const { isLoading, error, data } = useQuery(
+
+  const navigateToBookDetails = (book) => {
+    navigation.navigate(BOOK_DETAILS, { book: book.item, thumbnail });
+  };
+
+  const addToManyBooks = () => {
+    manyBooks.push(query);
+    setQuery("");
+  };
+
+  const booksList = (book) => {
+    return (
+      <BookCard
+        thumbnail={thumbnail}
+        onPress={() => navigateToBookDetails(book)}
+        book={book.item}
+      />
+    );
+  };
+  const changeValue = (value) => {
+    setQuery(value);
+  };
+
+  const manageManySearch = () => {
+    setLoading(true);
+    if (many) {
+      setMany(false);
+    } else {
+      setMany(true);
+    }
+  };
+
+  useQuery(
     "books",
     async () => {
       try {
-        const res = await axios.get(
-          `https://openlibrary.org/isbn/${query}.json`
-        );
-        try {
+        console.log("entered try");
+        for (let i = 0; i < manyBooks.length; i++) {
+          console.log(manyBooks[i], "inside for");
           const res = await axios.get(
-            `https://openlibrary.org/api/books?bibkeys=ISBN:${query}&format=json`
+            `https://openlibrary.org/isbn/${manyBooks[i]}.json`
           );
-          const thumbnailUrl = res?.data[`ISBN:${query}`]?.thumbnail_url;
-        } catch (error) {}
-        return res;
+
+          manyBooksNew.push(res.data);
+          try {
+            const res = await axios.get(
+              `https://openlibrary.org/api/books?bibkeys=ISBN:${manyBooks[i]}&format=json`
+            );
+            const thumbnailUrl =
+              res?.data[`ISBN:${manyBooks[i]}`].thumbnail_url;
+            console.log(thumbnailUrl, "thumbnailUrl");
+            setThumbnail(thumbnailUrl);
+          } catch (error) {}
+        }
+        manyBooks = [];
+        setMany(false);
+        setLoading(false);
       } catch (error) {
         console.log(error, "error");
       }
     },
-
     {
-      // Refetch the data every second
-      retryOnMount: true,
-
-      //   refetchInterval: query.length === 10 || query.length === 13 ? 500 : false,
+      refetchInterval: many ? 1000 : false,
     }
   );
-
-  const navigateToBookDetails = (book) => {
-    navigation.navigate(BOOK_DETAILS, { book: data?.data, thumbnail });
-  };
-
-  //   const booksList = (book) => {
-  //     return (
-  //       <BookCard book={book.item} onPress={() => navigateToBookDetails(book)} />
-  //     );
-  //   };
-  const changeValue = (value) => {
-    setQuery(value);
-  };
 
   return (
     <View style={styles.container}>
       <SafeAreaView />
       <Text style={styles.header}>Books</Text>
-      <TextInput
-        onChangeText={setQuery}
-        keyboardType="number-pad"
-        placeholder={"Search"}
-        style={styles.input}
-      />
-      <TextInput
-        // onChangeText={setQueryTwo}
-        keyboardType="number-pad"
-        placeholder={"Search"}
-        style={styles.input}
-      />
-      <Button title="add serial" backgroundColor="red" />
-      {data?.data?.title && (
-        <BookCard
-          thumbnail={thumbnail}
-          book={data?.data}
-          onPress={navigateToBookDetails}
+
+      <Text>Search Many Books</Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          keyboardType="number-pad"
+          placeholder={"Search"}
+          style={styles.input}
+        />
+        <TouchableOpacity onPress={addToManyBooks}>
+          <Ionicons
+            style={styles.icon}
+            name="add-circle"
+            size={35}
+            color="green"
+          />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.isbnList}>
+        {manyBooks.map((isbn) => {
+          return <IsbnCard key={isbn} isbn={isbn} />;
+        })}
+      </View>
+      <TouchableOpacity style={styles.button} onPress={manageManySearch}>
+        <Text style={styles.buttonTitle}>Search</Text>
+        {loading && <ActivityIndicator color="white" />}
+      </TouchableOpacity>
+
+      {manyBooksNew.length > 0 && (
+        <FlatList
+          style={{ width: "100%" }}
+          data={manyBooksNew}
+          renderItem={booksList}
+          keyExtractor={(book) => book.id}
         />
       )}
-      {/* <FlatList
-        contentContainerStyle={{
-          flex: 1,
-        }}
-        data={books}
-        renderItem={booksList}
-        numColumns={2}
-        keyExtractor={(book) => book.id}
-      /> */}
     </View>
   );
 };
